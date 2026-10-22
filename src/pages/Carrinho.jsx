@@ -12,10 +12,13 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
 
   const itens = agruparItens(carrinho)
   const total = calcularTotal(carrinho)
-  const totalComDesconto = cupomAplicado ? total * (1 - cupomAplicado.desconto) : total
+  const descontoCupom = cupomAplicado ? total * cupomAplicado.desconto : 0
+  const totalComDesconto = total - descontoCupom
+  const valorFaltanteFrete = Math.max(200 - totalComDesconto, 0)
+  const temFreteGratis = totalComDesconto >= 200
 
   const sugestoes = produtos
-    .filter((produto) => !carrinho.find((item) => item.id === produto.id))
+    .filter((produto) => produto.estoque > 0 && !carrinho.find((item) => item.id === produto.id))
     .slice(0, 3)
 
   function aplicarCupom(evento) {
@@ -58,7 +61,7 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
               </div>
               <div className="item-info">
                 <p className="item-titulo">{item.produto.title}</p>
-                <p className="item-preco">R$ {item.produto.price}</p>
+                <p className="item-preco">{formatarPreco(item.produto.price)}</p>
               </div>
               <span className="item-quantidade">{item.quantidade} un.</span>
               <button className="botao-texto" onClick={() => onRemover(item.produto.id)}>
@@ -91,6 +94,18 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
             <p className="resumo-linha">
               <span>Desconto</span>
               <span>{cupomAplicado.desconto * 100}%</span>
+            </p>
+          )}
+          {!temFreteGratis && (
+            <p className="resumo-linha frete-faltante">
+              <span>Frete grátis</span>
+              <span>Falta {formatarPreco(valorFaltanteFrete)}</span>
+            </p>
+          )}
+          {temFreteGratis && (
+            <p className="resumo-linha frete-gratis">
+              <span>Frete grátis</span>
+              <span>Ativo</span>
             </p>
           )}
           <p className="total">

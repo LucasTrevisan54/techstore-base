@@ -30,7 +30,7 @@ export default function Footer({ clientes, clienteAtualId, onTrocarCliente }) {
         <label className="cliente-simulado">
           Cliente de teste
           <select
-            value={clienteAtualId || ''}
+            value={clienteAtualId == null ? '' : String(clienteAtualId)}
             onChange={(evento) => onTrocarCliente(evento.target.value)}
           >
             {clientes.map((cliente) => (

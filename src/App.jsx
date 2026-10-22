@@ -7,8 +7,11 @@ import Loja from './pages/Loja'
 import PaginaProduto from './pages/PaginaProduto'
 import Carrinho from './pages/Carrinho'
 import Estoque from './pages/Estoque'
+import PainelLojista from './pages/PainelLojista'
 import { buscarProdutos } from './services/produtos'
 import { buscarClientes } from './services/clientes'
+import { produtoDisponivelParaVenda } from './utils/carrinho'
+import { normalizarClienteId } from './utils/clientes'
 
 export default function App() {
   const [produtos, setProdutos] = useState([])
@@ -17,6 +20,7 @@ export default function App() {
   const [carrinho, setCarrinho] = useState([])
   const [clientes, setClientes] = useState([])
   const [clienteAtualId, setClienteAtualId] = useState(null)
+  const [listaEspera, setListaEspera] = useState({})
 
   useEffect(() => {
     buscarProdutos()
@@ -26,12 +30,16 @@ export default function App() {
 
     buscarClientes().then((dados) => {
       setClientes(dados)
-      if (dados.length > 0) setClienteAtualId(dados[0].id)
+      if (dados.length > 0) setClienteAtualId(normalizarClienteId(dados[0].id))
     })
   }, [])
 
   function adicionarAoCarrinho(produto) {
-    setCarrinho(carrinho.concat(produto))
+    if (!produtoDisponivelParaVenda(produto)) {
+      return
+    }
+
+    setCarrinho((itensAtuais) => itensAtuais.concat(produto))
   }
 
   function removerUmaUnidade(produtoId) {
@@ -48,7 +56,19 @@ export default function App() {
     )
   }
 
-  const clienteAtual = clientes.find((cliente) => cliente.id === clienteAtualId)
+  function registrarEspera(produtoId, dadosCliente) {
+    setListaEspera((esperaAtual) => {
+      const interessados = esperaAtual[produtoId] ?? []
+      return {
+        ...esperaAtual,
+        [produtoId]: [...interessados, { ...dadosCliente, produtoId }],
+      }
+    })
+  }
+
+  const clienteAtual = clientes.find(
+    (cliente) => Number(cliente.id) === Number(clienteAtualId)
+  )
 
   return (
     <div className="app">
@@ -67,7 +87,13 @@ export default function App() {
             />
             <Route
               path="/produto/:id"
-              element={<PaginaProduto produtos={produtos} onAdicionar={adicionarAoCarrinho} />}
+              element={
+                <PaginaProduto
+                  produtos={produtos}
+                  onAdicionar={adicionarAoCarrinho}
+                  onRegistrarEspera={registrarEspera}
+                />
+              }
             />
             <Route
               path="/carrinho"
@@ -81,7 +107,11 @@ export default function App() {
                 />
               }
             />
-            <Route path="/estoque" element={<Estoque produtos={produtos} />} />
+            <Route path="/estoque" element={<Estoque produtos={produtos} listaEspera={listaEspera} />} />
+            <Route
+              path="/painel"
+              element={<PainelLojista produtos={produtos} listaEspera={listaEspera} />}
+            />
           </Routes>
         )}
       </main>
@@ -89,7 +119,7 @@ export default function App() {
       <Footer
         clientes={clientes}
         clienteAtualId={clienteAtualId}
-        onTrocarCliente={setClienteAtualId}
+        onTrocarCliente={(valor) => setClienteAtualId(normalizarClienteId(valor))}
       />
     </div>
   )
